@@ -1,3 +1,4 @@
+#pragma once
 #include <ManiTests/ManiTests.h>
 #include <ManiZ/reflection.h>
 
