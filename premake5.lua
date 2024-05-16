@@ -11,6 +11,7 @@ workspace "ManiZ"
     symbols "On"
 
     includedirs { "include/" }
+    includedirs { "ThirdParties/ManiTests/include" }
 
 project "Sandbox"
     kind "ConsoleApp"

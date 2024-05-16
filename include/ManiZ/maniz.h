@@ -1,6 +1,6 @@
 #pragma once
 
-#include "reflection.h"
+#include "Reflection.h"
 
 #include <unordered_map>
 #include <functional>
@@ -37,7 +37,7 @@ namespace ManiZ
 		}
 		else
 		{
-			return RFL::foreachMember(data, [](const auto& ...members) -> std::string 
+			return RFL::decompose(data, [](const auto& ...members) -> std::string 
 			{ 
 				return Serializer::serializeMany(members...); 
 			});

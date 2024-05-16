@@ -23,9 +23,9 @@ namespace ManiZ
 			return RFL::memberCount_impl<T>();
 		}
 
-		constexpr auto foreachMember(const auto& object, auto&& f)
+		constexpr static auto decompose(const auto& object, auto&& f)
 		{
-			return RFL::foreachMember_impl(object, f);
+			return RFL::decompose_impl(object, f);
 		}
 
 	private:
@@ -286,7 +286,7 @@ namespace ManiZ
 			else { static_assert(std::is_void_v<T>, "maximum member count reached"); }
 		}
 
-		constexpr auto foreachMember_impl(const auto& object, auto&& f)
+		constexpr static auto decompose_impl(const auto& object, auto&& f)
 		{
 			constexpr size_t count = ManiZ::RFL::memberCount<decltype(object)>();
 
