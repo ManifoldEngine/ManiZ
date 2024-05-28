@@ -1,4 +1,4 @@
-#include <ManiTests/ManiTests.h>
+#include "ManiTests/ManiTests.h"
 
 int main()
 {
