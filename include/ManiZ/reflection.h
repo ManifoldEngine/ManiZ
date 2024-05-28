@@ -413,7 +413,7 @@ namespace ManiZ
 			std::array<std::string, count> acc;
 			getMemberNames_impl<T, count - 1, count>(acc);
 			std::vector<std::string> v(std::begin(acc), std::end(acc));
-			return std::move(v);
+			return v;
 		}
 	}
 }
