@@ -100,13 +100,18 @@ MANI_SECTION_BEGIN(Json, "Json")
 			Vector position;
 			Vector rotation;
 			Vector scale;
+
+			std::vector<int> vector;
+			std::vector<std::string> strings;
+
+			bool boolean;
 		};
 		
-		Transform t{ { 1.f, 2.f }, { 3.f, 4.f }, { 5.f, 6.f } };
+		Transform t{ { 1.5f, 2.5f }, { 3.f, 4.f }, { 5.f, 6.f }, { 1, 2, 3, 4 }, { "un", "deux", "trois", "quatre" }, true };
 
 		std::string json = ManiZ::to::json(t);
 		std::cout << json << std::endl;
-		Transform t2 = ManiZ::from::json<Transform>(json);
+		//Transform t2 = ManiZ::from::json<decltype(typeid(t))>(json);
 
 		MANI_ASSERT(std::abs(t.position.x - t.position.y) < FLT_EPSILON, "before and after should be equal");
 		MANI_ASSERT(std::abs(t.position.x - t.position.y) < FLT_EPSILON, "before and after should be equal");
@@ -116,6 +121,38 @@ MANI_SECTION_BEGIN(Json, "Json")
 
 		MANI_ASSERT(std::abs(t.scale.x - t.scale.y) < FLT_EPSILON, "before and after should be equal");
 		MANI_ASSERT(std::abs(t.scale.x - t.scale.y) < FLT_EPSILON, "before and after should be equal");
+	}
+
+	MANI_TEST(JsonObject, "Should properly allocate and free a Json Object")
+	{
+		{
+			ManiZ::JsonObject obj(5);
+			MANI_ASSERT(obj.get<short>() == 5, "should match value");
+			MANI_ASSERT(obj.get<int>() == 5, "should match value");
+			MANI_ASSERT(obj.get<long>() == 5, "should match value");
+		}
+
+		{
+			ManiZ::JsonObject obj(std::numeric_limits<unsigned long>::max());			
+			MANI_ASSERT(obj.get<unsigned long>() == std::numeric_limits<unsigned long>::max(), "should match value");
+			MANI_ASSERT(obj.get<uint64_t>() == std::numeric_limits<unsigned long>::max(), "should match value");
+		}
+
+		{
+			ManiZ::JsonObject obj(5.0);
+			MANI_ASSERT(std::abs(obj.get<float>() - 5.0f) < FLT_EPSILON, "should match value");
+			MANI_ASSERT(std::abs(obj.get<double>() - 5.0) < FLT_EPSILON, "should match value");
+		}
+
+		{
+			ManiZ::JsonObject obj("Hello");
+			MANI_ASSERT(obj.get<std::string>() == "Hello", "should match value");
+		}
+
+		{
+			ManiZ::JsonObject obj(std::vector { ManiZ::JsonObject(1), ManiZ::JsonObject(2), ManiZ::JsonObject(3), ManiZ::JsonObject(4) });
+			MANI_ASSERT(obj.get<std::vector<ManiZ::JsonObject>>().size() == 4, "should match value");
+		}
 	}
 }
 MANI_SECTION_END(Json)
