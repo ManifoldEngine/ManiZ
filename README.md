@@ -71,5 +71,6 @@ int main()
     assert(std::abs(t.rotation.y - jsonObject["rotation"]["y"].get<float>()) < FLT_EPSILON);
     assert(std::abs(t.scale.x - jsonObject["scale"]["x"].get<float>()) < FLT_EPSILON);
     assert(std::abs(t.scale.y - jsonObject["scale"]["y"].get<float>()) < FLT_EPSILON);
+    return EXIT_SUCCESS;
 }
 ```
