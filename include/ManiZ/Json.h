@@ -3,9 +3,11 @@
 #include <ManiZ/Reflection.h>
 #include <ManiZ/Traits.h>
 #include <vector>
+#include <map>
 #include <string>
 #include <format>
 #include <algorithm>
+#include <assert.h>
 
 namespace ManiZ
 {
@@ -153,17 +155,29 @@ namespace ManiZ
 				}
 			}
 
-			template<>
-			inline std::string format(const std::string& data)
-			{
-				return std::format("\"{}\"", data);
-			}
-
 			template<typename T>
 			inline std::string format(const T& data)
 			{
 				return std::format("{}", data);
 			}
+
+			template<>
+			inline std::string format<float>(const float& data)
+			{
+				return std::format("{:f}", data);
+			}
+
+			template<>
+			inline std::string format<double>(const double& data)
+			{
+				return std::format("{:f}", data);
+			}
+
+			template<>
+			inline std::string format(const std::string& data)
+			{
+				return std::format("\"{}\"", data);
+			}			
 		}
 
 		inline std::string json(const auto& ...data)
@@ -178,16 +192,24 @@ namespace ManiZ
 
 	namespace _impl
 	{
-		template<typename T>
-		using json_variant = std::variant<long, unsigned long, double, std::string, bool, std::vector<T>>;
+		using json_variant = std::variant<long, unsigned long, double, std::string, bool>;
 	}
 
 	class JsonObject
 	{
 	public:
+		JsonObject() = default;
+
 		JsonObject(const auto& in)
 		{
-			value = in;
+			m_isValid = true;
+			m_value = in;
+		}
+
+		JsonObject(const std::vector<JsonObject>& in)
+		{
+			m_isValid = true;
+			m_array = in;
 		}
 
 		template<typename T> 
@@ -197,76 +219,319 @@ namespace ManiZ
 		requires std::is_integral_v<T> && std::is_unsigned_v<T>
 		T get() const
 		{
-			return static_cast<T>(std::get<unsigned long>(value));
+			return static_cast<T>(std::get<unsigned long>(m_value));
 		}
 
 		template<typename T>
 		requires std::is_integral_v<T> && !std::is_unsigned_v<T>
 		T get() const
 		{
-			return static_cast<T>(std::get<long>(value));
+			return static_cast<T>(std::get<long>(m_value));
 		}
 
 		template<typename T>
 		requires std::is_floating_point_v<T>
 		T get() const
 		{
-			return static_cast<T>(std::get<double>(value));
+			return static_cast<T>(std::get<double>(m_value));
+		}
+
+		template<>
+		bool get<bool>() const
+		{
+			return std::get<bool>(m_value);
 		}
 
 		template<>
 		std::string get<std::string>() const
 		{
-			return std::get<std::string>(value);
+			return std::get<std::string>(m_value);
 		}
 
-		template<>
-		std::vector<JsonObject> get<std::vector<JsonObject>>() const
+		const std::vector<JsonObject>& getArray() const
 		{
-			return std::get<std::vector<JsonObject>>(value);
+			return m_array;
 		}
 
+		const JsonObject& getAt(size_t index) const
+		{
+			assert(index >= 0 && index < m_keysInOrder.size());
+			return m_members.at(m_keysInOrder[index]);
+		}
+
+		JsonObject& operator[](const std::string& key) 
+		{
+			if (!m_members.contains(key))
+			{
+				m_keysInOrder.push_back(key);
+			}
+			return m_members[key]; 
+		}
+
+		const JsonObject& operator[](const std::string& key) const { return m_members.at(key); }
+		size_t size() const { return m_members.size(); }
+		bool isValid() const { return m_isValid || m_members.size() > 0 || m_members.size() > 0; }
 	private:
-		_impl::json_variant<JsonObject> value;
-		std::unordered_map<std::string, JsonObject> members;
+		_impl::json_variant m_value;
+		std::vector<std::string> m_keysInOrder;
+		std::vector<JsonObject> m_array;
+		std::map<std::string, JsonObject> m_members;
+		bool m_isValid = false;
 	};
 
 	namespace from
 	{
-		template<class T>
-		T json(const std::string_view& jsonString);
-		JsonObject parse(const std::string_view& jsonString);
-
+		// json parser
 		namespace _impl
 		{
-			inline void deserializeMany(const JsonObject& json, auto& first, auto& ...others);
-			inline void deserializeMany(const JsonObject& json);
-			inline void deserialize(const JsonObject& json, auto& data, bool isInContainer = false);
-
-
-			inline void deserializeMany(const JsonObject & json) {}
-
-			inline void deserializeMany(const JsonObject& json, auto& first, auto& ...others)
+			struct JsonParser
 			{
+				std::string::const_iterator it;
+				size_t line = 0;
+				size_t column = 0;
+
+				void inc()
+				{
+					if (*it == '\n')
+					{
+						column = 0;
+						line++;
+					}
+					else
+					{
+						column++;
+					}
+					it++;
+				}
+
+				char get() const { return *it; }
+			};
+
+			inline JsonObject parseMany(JsonParser& parser, const std::string& text);
+			inline JsonObject parse(JsonParser& parser, const std::string& text);
+			inline void skipWhitespaces(JsonParser& parser, const std::string& text);
+			inline JsonObject error(const JsonParser& parser);
+
+			inline JsonObject parseMany(JsonParser& parser, const std::string& text)
+			{
+				if (parser.get() != '{')
+				{
+					return error(parser);
+				}
+
+				parser.inc();
+
+				JsonObject obj;
+				while (parser.it != text.end() && parser.get() != '}')
+				{
+					skipWhitespaces(parser, text);
+
+					if (parser.get() != '"')
+					{
+						// we expect a key
+						return error(parser);
+					}
+
+					// skip "
+					parser.inc();
+
+					const std::string::const_iterator start = parser.it;
+					while (parser.get() != '"' && parser.it != text.end())
+					{
+						parser.inc();
+					}
+					
+					std::string key = text.substr(start - text.begin(), parser.it - start);
+					
+					parser.inc();
+					skipWhitespaces(parser, text);
+					if (parser.get() != ':')
+					{
+						// we expect a : between keys and values
+						return error(parser);
+					}
+
+					parser.inc();
+					skipWhitespaces(parser, text);
+					
+					obj[key] = parse(parser, text);
+					if (!obj[key].isValid())
+					{
+						return error(parser);
+					}
+
+					parser.inc();
+					skipWhitespaces(parser, text);
+					if (parser.get() != ',')
+					{
+						break;
+					}
+					parser.inc();
+					skipWhitespaces(parser, text);
+				}
+				return obj;
 			}
-			
-			inline void deserialize(const JsonObject & json, auto & data, bool isInContainer)
+
+			inline JsonObject parse(JsonParser& parser, const std::string& text)
 			{
+				if (parser.get() == '{')
+				{
+					return parseMany(parser, text);
+				} 
+				else if (parser.get() == '[')
+				{
+					// array
+					parser.inc();
+					std::vector<JsonObject> vec;
+					while (parser.get() != ']' && parser.it != text.end())
+					{
+						skipWhitespaces(parser, text);
+						vec.push_back(parse(parser, text));
+						parser.inc();
+						if (parser.get() != ',')
+						{
+							break;
+						}
+						parser.inc();
+						skipWhitespaces(parser, text);
+					}
+					return JsonObject(vec);
+				}
+				else if (parser.get() == '"')
+				{
+					// string
+					parser.inc();
+					const std::string::const_iterator start = parser.it;
+					while (parser.get() != '"' && parser.it != text.end())
+					{
+						parser.inc();
+					}
+
+					std::string value = text.substr(start - text.begin(), parser.it - start);
+					return JsonObject(value);
+				}
+				else
+				{
+					// primitive
+					const std::string::const_iterator start = parser.it;
+					while (parser.get() != ',' && parser.it != text.end())
+					{
+						parser.inc();
+					}
+					std::string value = text.substr(start - text.begin(), parser.it - start);
+					parser.it--; // we go back one step because that's the behavior expected of this function.
+					if (value == "true")
+					{
+						return JsonObject(true);
+					}
+					else if (value == "false")
+					{
+						return JsonObject(false);
+					}
+					else if (value.find(".") != std::string::npos)
+					{
+						return JsonObject(std::stod(value));
+					}
+					else
+					{
+						return JsonObject(std::stoi(value));
+					}
+				}
+			}
+
+			inline void skipWhitespaces(JsonParser& parser, const std::string& text)
+			{
+				// skip white space
+				while (parser.get() == ' ' || parser.get() == '\n' || parser.get() == '\t' && parser.it != text.end())
+				{
+					parser.inc();
+				}
+			}
+
+			inline JsonObject error(const JsonParser& parser)
+			{
+				std::cout << std::format("[ManiZ::json]: failed to parse, error at line {}:{}", parser.line, parser.column) << std::endl;
+				return JsonObject();
 			}
 		}
 
+		// object builder
+		namespace _impl
+		{
+			inline void deserializeMany(size_t index, const JsonObject& json, auto& first, auto& ...others);
+			inline void deserializeMany(size_t index, const JsonObject& json);
+			inline void deserialize(size_t index, const JsonObject& json, auto& data);
+
+			inline void deserializeMany(size_t index, const JsonObject& json) {}
+
+			inline void deserializeMany(size_t index, const JsonObject& json, auto& first, auto& ...others)
+			{
+				deserialize(index, json, first);
+				deserializeMany(index + 1, json, others...);
+			}
+			
+			inline void deserialize(size_t index, const JsonObject& json, auto& data)
+			{
+				using type = std::remove_cvref_t<decltype(data)>;
+				static_assert(!std::is_pointer_v<type>);
+
+				if constexpr (std::is_fundamental_v<type>)
+				{
+					data = json.getAt(index).get<type>();
+				}
+				
+				else if constexpr (ManiZ::is_container<type>::value)
+				{
+					using value_type = typename type::value_type;
+					
+					// hard iterate over the container
+					std::vector<JsonObject> jsonArray = json.getAt(index).getArray();
+					for (const JsonObject& jsonObject : jsonArray)
+					{
+						value_type value = jsonObject.get<value_type>();
+						if constexpr (requires { data.push_back(value_type(value)); })
+						{
+							data.push_back(value_type(value));
+						}
+						else
+						{
+							data.insert(value_type(value));
+						}
+					}
+				}
+				else
+				{
+					// we're in an aggregate type
+					RFL::visitMembers(data, [&](auto& ...members)
+					{
+						// recursively serialize the members.
+						deserializeMany(0, json.getAt(index), members...);
+					});
+				}
+			}
+		}
+
+		JsonObject parse(const std::string& jsonString)
+		{
+			if (jsonString.empty())
+			{
+				return JsonObject();
+			}
+			_impl::JsonParser parser;
+			parser.it = jsonString.begin();
+			return _impl::parseMany(parser, jsonString);
+		}
+
 		template<class T>
-		T json(const std::string_view& jsonString)
+		T json(const std::string& jsonString)
 		{
 			T obj;
 			JsonObject json = parse(jsonString);
-			_impl::deserializeMany(json, obj);
-			return ;
-		}
-
-		JsonObject parse(const std::string_view& jsonString)
-		{
-			return JsonObject(0);
+			// we wrap the json object to kickstart the deserialization recursion
+			JsonObject wrapper;
+			wrapper["value"] = std::move(json);
+			_impl::deserializeMany(0, wrapper, obj);
+			return obj;
 		}
 	}
 }

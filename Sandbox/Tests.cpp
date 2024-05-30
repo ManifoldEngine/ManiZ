@@ -110,17 +110,29 @@ MANI_SECTION_BEGIN(Json, "Json")
 		Transform t{ { 1.5f, 2.5f }, { 3.f, 4.f }, { 5.f, 6.f }, { 1, 2, 3, 4 }, { "un", "deux", "trois", "quatre" }, true };
 
 		std::string json = ManiZ::to::json(t);
-		std::cout << json << std::endl;
-		//Transform t2 = ManiZ::from::json<decltype(typeid(t))>(json);
+		Transform t2 = ManiZ::from::json<Transform>(json);
 
-		MANI_ASSERT(std::abs(t.position.x - t.position.y) < FLT_EPSILON, "before and after should be equal");
-		MANI_ASSERT(std::abs(t.position.x - t.position.y) < FLT_EPSILON, "before and after should be equal");
+		MANI_ASSERT(std::abs(t.position.x - t2.position.x) < FLT_EPSILON, "before and after should be equal");
+		MANI_ASSERT(std::abs(t.position.y - t2.position.y) < FLT_EPSILON, "before and after should be equal");
 
-		MANI_ASSERT(std::abs(t.rotation.x - t.rotation.y) < FLT_EPSILON, "before and after should be equal");
-		MANI_ASSERT(std::abs(t.rotation.x - t.rotation.y) < FLT_EPSILON, "before and after should be equal");
+		MANI_ASSERT(std::abs(t.rotation.x - t2.rotation.x) < FLT_EPSILON, "before and after should be equal");
+		MANI_ASSERT(std::abs(t.rotation.y - t2.rotation.y) < FLT_EPSILON, "before and after should be equal");
 
-		MANI_ASSERT(std::abs(t.scale.x - t.scale.y) < FLT_EPSILON, "before and after should be equal");
-		MANI_ASSERT(std::abs(t.scale.x - t.scale.y) < FLT_EPSILON, "before and after should be equal");
+		MANI_ASSERT(std::abs(t.scale.x - t2.scale.x) < FLT_EPSILON, "before and after should be equal");
+		MANI_ASSERT(std::abs(t.scale.y - t2.scale.y) < FLT_EPSILON, "before and after should be equal");
+
+		MANI_ASSERT(t.vector.size() == t2.vector.size(), "vectors should be of the same size");
+		MANI_ASSERT(t.strings.size() == t2.strings.size(), "vectors should be of the same size");
+
+		for (size_t i = 0; i < t.vector.size(); ++i)
+		{
+			MANI_ASSERT(t.vector[i] == t2.vector[i], "before and after should be equal");
+		}
+
+		for (size_t i = 0; i < t.strings.size(); ++i)
+		{
+			MANI_ASSERT(t.strings[i] == t2.strings[i], "before and after should be equal");
+		}
 	}
 
 	MANI_TEST(JsonObject, "Should properly allocate and free a Json Object")
@@ -150,9 +162,51 @@ MANI_SECTION_BEGIN(Json, "Json")
 		}
 
 		{
-			ManiZ::JsonObject obj(std::vector { ManiZ::JsonObject(1), ManiZ::JsonObject(2), ManiZ::JsonObject(3), ManiZ::JsonObject(4) });
-			MANI_ASSERT(obj.get<std::vector<ManiZ::JsonObject>>().size() == 4, "should match value");
+			ManiZ::JsonObject obj(true);
+			MANI_ASSERT(obj.get<bool>() == true, "should match value");
 		}
+
+		{
+			ManiZ::JsonObject obj(std::vector { ManiZ::JsonObject(1), ManiZ::JsonObject(2), ManiZ::JsonObject(3), ManiZ::JsonObject(4) });
+			MANI_ASSERT(obj.getArray().size() == 4, "should match value");
+		}
+	}
+
+	MANI_TEST(ShouldSerializeAndParse, "Should serialize then parse the json string")
+	{
+		struct Vector
+		{
+			float x;
+			float y;
+		};
+
+		struct Transform
+		{
+			Vector position;
+			Vector rotation;
+			Vector scale;
+
+			std::vector<int> vector;
+			std::vector<std::string> strings;
+
+			bool boolean;
+		};
+
+		Transform t{ { 1.5f, 2.5f }, { 3.0f, 4.f }, { 5.f, 6.f }, { 1, 2, 3, 4 }, { "un", "deux", "trois", "quatre" }, true };
+
+		std::string json = ManiZ::to::json(t);
+		ManiZ::JsonObject jsonObject = ManiZ::from::parse(json);
+
+		MANI_ASSERT(jsonObject.isValid(), "Json object should be valid");
+
+		MANI_ASSERT(std::abs(t.position.x - jsonObject["position"]["x"].get<float>()) < FLT_EPSILON, "before and after should be equal");
+		MANI_ASSERT(std::abs(t.position.y - jsonObject["position"]["y"].get<float>()) < FLT_EPSILON, "before and after should be equal");
+
+		MANI_ASSERT(std::abs(t.rotation.x - jsonObject["rotation"]["x"].get<float>()) < FLT_EPSILON, "before and after should be equal");
+		MANI_ASSERT(std::abs(t.rotation.y - jsonObject["rotation"]["y"].get<float>()) < FLT_EPSILON, "before and after should be equal");
+
+		MANI_ASSERT(std::abs(t.scale.x - jsonObject["scale"]["x"].get<float>()) < FLT_EPSILON, "before and after should be equal");
+		MANI_ASSERT(std::abs(t.scale.y - jsonObject["scale"]["y"].get<float>()) < FLT_EPSILON, "before and after should be equal");
 	}
 }
 MANI_SECTION_END(Json)
