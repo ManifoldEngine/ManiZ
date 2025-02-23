@@ -209,12 +209,6 @@ MANI_SECTION_BEGIN(Json, "Json")
 		MANI_ASSERT(std::abs(t.scale.y - jsonObject["scale"]["y"].get<float>()) < FLT_EPSILON, "before and after should be equal");
 	}
 
-	template<typename T>
-	inline constexpr std::string testfunctioname()
-	{
-		return std::source_location::current().function_name();
-	}
-
 	MANI_TEST(ShouldSerializeAndPartStdArray, "Should serialize then parse an std::array")
 	{
 		struct Test
