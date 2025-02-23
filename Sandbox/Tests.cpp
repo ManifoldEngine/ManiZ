@@ -208,5 +208,31 @@ MANI_SECTION_BEGIN(Json, "Json")
 		MANI_ASSERT(std::abs(t.scale.x - jsonObject["scale"]["x"].get<float>()) < FLT_EPSILON, "before and after should be equal");
 		MANI_ASSERT(std::abs(t.scale.y - jsonObject["scale"]["y"].get<float>()) < FLT_EPSILON, "before and after should be equal");
 	}
+
+	template<typename T>
+	inline constexpr std::string testfunctioname()
+	{
+		return std::source_location::current().function_name();
+	}
+
+	MANI_TEST(ShouldSerializeAndPartStdArray, "Should serialize then parse an std::array")
+	{
+		struct Test
+		{
+			std::array<int, 3> values;
+		};
+
+		Test t = { .values = { 1, 2, 3 } };
+		std::string json = ManiZ::to::json(t);
+		Test t2 = ManiZ::from::json<Test>(json);
+
+		bool result = true;
+		for (int i = 0; i < 3; i++)
+		{
+			result &= t.values[i] == t2.values[i];
+		}
+
+		MANI_ASSERT(result, "Both Test objects should be equal");
+	}
 }
 MANI_SECTION_END(Json)

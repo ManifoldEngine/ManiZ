@@ -8,6 +8,7 @@
 #include <format>
 #include <algorithm>
 #include <assert.h>
+#include <ranges>
 
 namespace ManiZ
 {
@@ -88,7 +89,8 @@ namespace ManiZ
 				{
 					write(name, format(data));
 				}
-				else if constexpr (ManiZ::is_container<type>::value)
+				//else if constexpr (ManiZ::is_container<type>::value)
+				else if constexpr (std::ranges::range<type>)
 				{
 					// hard iterate over the container
 					s += std::format("\"{}\": [\n", name);
@@ -480,12 +482,13 @@ namespace ManiZ
 					data = json.getAt(index).get<type>();
 				}
 				
-				else if constexpr (ManiZ::is_container<type>::value)
+				else if constexpr (std::ranges::range<type>)
 				{
 					using value_type = typename type::value_type;
 					
 					// hard iterate over the container
 					std::vector<JsonObject> jsonArray = json.getAt(index).getArray();
+					size_t index = 0;
 					for (const JsonObject& jsonObject : jsonArray)
 					{
 						value_type value = jsonObject.get<value_type>();
@@ -493,10 +496,15 @@ namespace ManiZ
 						{
 							data.push_back(value_type(value));
 						}
-						else
+						else if constexpr (requires { data.insert(value_type(value)); })
 						{
 							data.insert(value_type(value));
 						}
+						else
+						{
+							data[index] = value_type(value);
+						}
+						index++;
 					}
 				}
 				else
