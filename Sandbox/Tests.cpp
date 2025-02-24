@@ -209,7 +209,7 @@ MANI_SECTION_BEGIN(Json, "Json")
 		MANI_ASSERT(std::abs(t.scale.y - jsonObject["scale"]["y"].get<float>()) < FLT_EPSILON, "before and after should be equal");
 	}
 
-	MANI_TEST(ShouldSerializeAndPartStdArray, "Should serialize then parse an std::array")
+	MANI_TEST(ShouldSerializeAndParseStdArray, "Should serialize then parse an std::array")
 	{
 		struct Test
 		{
@@ -227,6 +227,20 @@ MANI_SECTION_BEGIN(Json, "Json")
 		}
 
 		MANI_ASSERT(result, "Both Test objects should be equal");
+	}
+
+	MANI_TEST(ShouldSerializeAndParseUnsignedIntegers, "Should serialize then parse an unsigned integer")
+	{
+		struct Test
+		{
+			unsigned int value = 0;
+		};
+
+		Test t = { .value = 5 };
+		std::string json = ManiZ::to::json(t);
+		Test t2 = ManiZ::from::json<Test>(json);
+
+		MANI_ASSERT(t.value == t2.value, "Both Test integers should be equal");
 	}
 }
 MANI_SECTION_END(Json)

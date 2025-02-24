@@ -228,7 +228,12 @@ namespace ManiZ
 		requires std::is_integral_v<T> && !std::is_unsigned_v<T>
 		T get() const
 		{
-			return static_cast<T>(std::get<long>(m_value));
+			// we deserialize to long only if the value is negative, otherwise it is set to the unsigned long slot of the variant.
+			if (const long* value = std::get_if<long>(&m_value))
+			{
+				return static_cast<T>(*value);
+			}
+			return static_cast<T>(std::get<unsigned long>(m_value));
 		}
 
 		template<typename T>
@@ -434,9 +439,13 @@ namespace ManiZ
 					{
 						return JsonObject(std::stod(value));
 					}
+					else if (value.find("-") != std::string::npos)
+					{
+						return JsonObject(std::stol(value));
+					}
 					else
 					{
-						return JsonObject(std::stoi(value));
+						return JsonObject(std::stoul(value));
 					}
 				}
 			}
