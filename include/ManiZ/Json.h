@@ -528,7 +528,7 @@ namespace ManiZ
 			}
 		}
 
-		JsonObject parse(const std::string& jsonString)
+		inline JsonObject parse(const std::string& jsonString)
 		{
 			if (jsonString.empty())
 			{
@@ -540,7 +540,7 @@ namespace ManiZ
 		}
 
 		template<class T>
-		T json(const std::string& jsonString)
+		inline T json(const std::string& jsonString)
 		{
 			T obj;
 			JsonObject json = parse(jsonString);
