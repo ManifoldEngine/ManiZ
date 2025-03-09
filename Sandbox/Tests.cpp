@@ -242,5 +242,55 @@ MANI_SECTION_BEGIN(Json, "Json")
 
 		MANI_ASSERT(t.value == t2.value, "Both Test integers should be equal");
 	}
+
+	MANI_TEST(ShouldSerializeAndParseDoubleArrays, "Should serialize double arrays")
+	{
+		struct Test
+		{
+			std::array<std::array<int, 3>, 3> data;
+		};
+
+		Test t = { 
+			.data = {{
+				{ 0, 1, 2 },
+				{ 3, 4, 5 },
+				{ 6, 7, 8 }
+			}}
+		};
+		std::string json = ManiZ::to::json(t);
+		Test t2 = ManiZ::from::json<Test>(json);
+		MANI_ASSERT(t.data == t2.data, "Both Test integers should be equal");
+	}
+
+	MANI_TEST(ShouldSerializeAndParseArrayWithNestedStruct, "Should serialize double arrays")
+	{
+		struct Vector
+		{
+			int x;
+			int y;
+		};
+
+		struct Test
+		{
+			std::array<Vector, 3> data;
+		};
+
+		Test t = {
+			.data = {{
+				{ 0, 1 },
+				{ 3, 4 },
+				{ 6, 7 }
+			}}
+		};
+		std::string json = ManiZ::to::json(t);
+		Test t2 = ManiZ::from::json<Test>(json);
+
+		MANI_ASSERT(t.data.size() == t2.data.size(), "both arrays should be the same size");
+		for (size_t index = 0; index < std::min(t.data.size(), t2.data.size()); index++)
+		{
+			MANI_ASSERT(t.data[index].x == t2.data[index].x, "data should be the same.");
+			MANI_ASSERT(t.data[index].y == t2.data[index].y, "data should be the same.");
+		}
+	}
 }
 MANI_SECTION_END(Json)

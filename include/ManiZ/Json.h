@@ -89,18 +89,33 @@ namespace ManiZ
 				{
 					write(name, format(data));
 				}
-				//else if constexpr (ManiZ::is_container<type>::value)
 				else if constexpr (std::ranges::range<type>)
 				{
+					if (!name.empty())
+					{
+						s += std::format("\"{}\": ", name);
+					}
+					else
+					{
+						addIndent(s, 1); // special formatting for nested arrays.
+						state.indent++;
+					}
+
 					// hard iterate over the container
-					s += std::format("\"{}\": [\n", name);
+					s += std::format("[\n");
 					state.indent++;
 					for (const auto& v : data)
 					{
 						s += serialize(state, v, true);
 					}
 					state.indent--;
+					
 					addIndent(s, state.indent);
+
+					if (name.empty())
+					{
+						state.indent--;
+					}
 					s += std::format("],\n");
 				}
 				else
@@ -471,7 +486,7 @@ namespace ManiZ
 		{
 			inline void deserializeMany(size_t index, const JsonObject& json, auto& first, auto& ...others);
 			inline void deserializeMany(size_t index, const JsonObject& json);
-			inline void deserialize(size_t index, const JsonObject& json, auto& data);
+			inline void deserialize(size_t index, const JsonObject& json, auto& data, bool isLeaf = false);
 
 			inline void deserializeMany(size_t index, const JsonObject& json) {}
 
@@ -481,39 +496,45 @@ namespace ManiZ
 				deserializeMany(index + 1, json, others...);
 			}
 			
-			inline void deserialize(size_t index, const JsonObject& json, auto& data)
+			inline void deserialize(size_t index, const JsonObject& json, auto& data, bool isLeaf)
 			{
 				using type = std::remove_cvref_t<decltype(data)>;
 				static_assert(!std::is_pointer_v<type>);
 
-				if constexpr (std::is_fundamental_v<type>)
+				if (!isLeaf)
 				{
-					data = json.getAt(index).get<type>();
+					if constexpr (!ManiZ::is_aggregate_struct<type>)
+					{
+						deserialize(0, json.getAt(index), data, true);
+						return;
+					}
 				}
-				
+
+				if constexpr (std::is_enum_v<type> || std::is_fundamental_v<type> || ManiZ::is_string<type>::value)
+				{
+					if (isLeaf)
+					{
+						data = json.get<type>();
+					}
+				}
 				else if constexpr (std::ranges::range<type>)
 				{
 					using value_type = typename type::value_type;
 					
 					// hard iterate over the container
-					std::vector<JsonObject> jsonArray = json.getAt(index).getArray();
-					size_t index = 0;
-					for (const JsonObject& jsonObject : jsonArray)
+					const std::vector<JsonObject>& jsonArray = json.getArray();
+					const size_t size = jsonArray.size();
+
+					if constexpr (requires { data.resize(size); })
 					{
-						value_type value = jsonObject.get<value_type>();
-						if constexpr (requires { data.push_back(value_type(value)); })
-						{
-							data.push_back(value_type(value));
-						}
-						else if constexpr (requires { data.insert(value_type(value)); })
-						{
-							data.insert(value_type(value));
-						}
-						else
-						{
-							data[index] = value_type(value);
-						}
-						index++;
+						data.resize(size);
+					}
+					
+					for (size_t index = 0; index < size; index++)
+					{
+						const JsonObject& jsonObject = jsonArray[index];
+						constexpr bool isLeaf = true;
+						deserialize(0, jsonObject, data[index], isLeaf);
 					}
 				}
 				else
@@ -522,7 +543,15 @@ namespace ManiZ
 					RFL::visitMembers(data, [&](auto& ...members)
 					{
 						// recursively serialize the members.
-						deserializeMany(0, json.getAt(index), members...);
+						if (isLeaf)
+						{
+							// we're in a nested structure
+							deserializeMany(0, json, members...);
+						}
+						else
+						{
+							deserializeMany(0, json.getAt(index), members...);
+						}
 					});
 				}
 			}
