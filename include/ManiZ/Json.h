@@ -468,7 +468,7 @@ namespace ManiZ
 			inline void skipWhitespaces(JsonParser& parser, const std::string& text)
 			{
 				// skip white space
-				while (parser.get() == ' ' || parser.get() == '\n' || parser.get() == '\t' && parser.it != text.end())
+				while (parser.get() == ' ' || parser.get() == '\n' || parser.get() == '\t' || parser.get() == '\r' && parser.it != text.end())
 				{
 					parser.inc();
 				}

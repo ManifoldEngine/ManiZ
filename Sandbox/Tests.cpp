@@ -292,5 +292,25 @@ MANI_SECTION_BEGIN(Json, "Json")
 			MANI_ASSERT(t.data[index].y == t2.data[index].y, "data should be the same.");
 		}
 	}
+
+	MANI_TEST(ShouldSkipWindowsSpecificReturnCaseCharacters, "Should skip \\r characters")
+	{
+		struct Test
+		{
+			std::string a;
+			std::string b;
+		};
+
+		Test t = {
+			"Coucou",
+			"salut"
+		};
+		
+		std::string jsonString = "{\r\t\"a\": \"Coucou\",\r\t\"b\": \"salut\"\r}";
+		Test t2 = ManiZ::from::json<Test>(jsonString);
+
+		MANI_ASSERT(t.a == t2.a, "should have deserialized properly");
+		MANI_ASSERT(t.b == t2.b, "should have deserialized properly");
+	}
 }
 MANI_SECTION_END(Json)
