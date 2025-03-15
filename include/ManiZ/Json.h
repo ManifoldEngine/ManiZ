@@ -436,7 +436,8 @@ namespace ManiZ
 				{
 					// primitive
 					const std::string::const_iterator start = parser.it;
-					while (parser.get() != ',' && parser.it != text.end())
+					auto isEndOfValueCharacter = [](char c) { return c == ',' || c == '\n' || c == '\r' || c == '\t' || c == '}'; };
+					while (!isEndOfValueCharacter(parser.get()) && parser.it != text.end())
 					{
 						parser.inc();
 					}
