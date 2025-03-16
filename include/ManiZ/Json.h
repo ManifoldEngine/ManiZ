@@ -81,9 +81,13 @@ namespace ManiZ
 					}
 				};
 
-				if constexpr (std::is_enum_v<type> || std::is_fundamental_v<type>)
+				if constexpr (std::is_fundamental_v<type>)
 				{
 					write(name, format(data));
+				}
+				else if constexpr (std::is_enum_v<type>)
+				{
+					write(name, format(static_cast<long>(data)));
 				}
 				else if constexpr (ManiZ::is_string<type>::value)
 				{
@@ -240,7 +244,7 @@ namespace ManiZ
 		}
 
 		template<typename T>
-		requires std::is_integral_v<T> && !std::is_unsigned_v<T>
+		requires (std::is_integral_v<T> && !std::is_unsigned_v<T>) || std::is_enum_v<T>
 		T get() const
 		{
 			// we deserialize to long only if the value is negative, otherwise it is set to the unsigned long slot of the variant.

@@ -343,5 +343,35 @@ MANI_SECTION_BEGIN(Json, "Json")
 			MANI_ASSERT(std::abs(t.value - t2.value) < FLT_EPSILON, "should have deserialized properly");
 		}
 	}
+
+	MANI_TEST(ShouldHandleEnums, "Should Handle Enums")
+	{
+		enum class ESomeEnum : int
+		{
+			Value_1 = -1,
+			Value0 = 0,
+			Value1,
+			Value2,
+		};
+
+		struct Test
+		{
+			ESomeEnum value;
+		};
+
+		{
+			Test t = { .value = ESomeEnum::Value2 };
+			const std::string jsonString = ManiZ::to::json(t);
+			Test t2 = ManiZ::from::json<Test>(jsonString);
+			MANI_ASSERT(t.value == t2.value, "should have deserialized properly");
+		}
+
+		{
+			Test t = { .value = ESomeEnum::Value_1 };
+			const std::string jsonString = ManiZ::to::json(t);
+			Test t2 = ManiZ::from::json<Test>(jsonString);
+			MANI_ASSERT(t.value == t2.value, "should have deserialized properly");
+		}
+	}
 }
 MANI_SECTION_END(Json)
