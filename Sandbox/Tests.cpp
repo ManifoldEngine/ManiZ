@@ -373,5 +373,29 @@ MANI_SECTION_BEGIN(Json, "Json")
 			MANI_ASSERT(t.value == t2.value, "should have deserialized properly");
 		}
 	}
+
+	MANI_TEST(HandleStandardizedJson, "should handle standard json coming from outside sources")
+	{
+		struct Vector
+		{
+			int x;
+			int y;
+		};
+
+		struct Test
+		{
+			std::vector<Vector> data;
+		};
+
+		std::string jsonString = "{\n\t\"data\": [\n\t\t{\n\t\t\t\"x\": 0,\n\t\t\t\"y\" : 1\n\t\t},\n\t\t{\n\t\t\t\"x\": 3,\n\t\t\t\"y\" : 4\n\t\t},\n\t\t{\n\t\t\t\"x\": 6,\n\t\t\t\"y\" : 7\n\t\t}\n\t]\n}";
+		Test t = ManiZ::from::json<Test>(jsonString);
+		MANI_ASSERT(t.data.size() == 3, "should have deserialized 3 vectors");
+		std::vector<Vector> expected = { {0, 1}, {3, 4}, {6, 7} };
+		for (size_t i = 0; i < 3; i++)
+		{
+			MANI_ASSERT(t.data[i].x == expected[i].x, "Vectors should be equal");
+			MANI_ASSERT(t.data[i].y == expected[i].y, "Vectors should be equal");
+		}
+	}
 }
 MANI_SECTION_END(Json)

@@ -388,11 +388,10 @@ namespace ManiZ
 
 					parser.inc();
 					skipWhitespaces(parser, text);
-					if (parser.get() != ',')
+					if (parser.get() == ',')
 					{
-						break;
+						parser.inc();
 					}
-					parser.inc();
 					skipWhitespaces(parser, text);
 				}
 				return obj;
@@ -414,11 +413,10 @@ namespace ManiZ
 						skipWhitespaces(parser, text);
 						vec.push_back(parse(parser, text));
 						parser.inc();
-						if (parser.get() != ',')
+						if (parser.get() == ',')
 						{
-							break;
+							parser.inc();
 						}
-						parser.inc();
 						skipWhitespaces(parser, text);
 					}
 					return JsonObject(vec);
