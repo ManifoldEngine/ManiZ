@@ -397,5 +397,22 @@ MANI_SECTION_BEGIN(Json, "Json")
 			MANI_ASSERT(t.data[i].y == expected[i].y, "Vectors should be equal");
 		}
 	}
+
+	MANI_TEST(ShouldParseImcompleteJsonString, "Should be able to parse an json object that is a subset of a struct")
+	{
+		struct Test
+		{
+			int a = 0;
+			int b = 0;
+			int c = 0;
+		};
+
+		std::string jsonString =	"{\n"
+									"\t\"a\": 4,\n"
+									"\t\"c\": 2\n"
+									"}";
+		Test t = ManiZ::from::json<Test>(jsonString);
+		MANI_ASSERT(t.a == 4 && t.b == 0 && t.c == 2, "t should be equal to the json values");
+	}
 }
 MANI_SECTION_END(Json)

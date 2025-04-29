@@ -287,11 +287,16 @@ namespace ManiZ
 
 		JsonObject& operator[](const std::string& key) 
 		{
-			if (!m_members.contains(key))
+			if (!has(key))
 			{
 				m_keysInOrder.push_back(key);
 			}
 			return m_members[key]; 
+		}
+
+		bool has(const std::string& key) const
+		{
+			return m_members.contains(key);
 		}
 
 		const JsonObject& operator[](const std::string& key) const { return m_members.at(key); }
@@ -487,19 +492,19 @@ namespace ManiZ
 		// object builder
 		namespace _impl
 		{
-			inline void deserializeMany(size_t index, const JsonObject& json, auto& first, auto& ...others);
-			inline void deserializeMany(size_t index, const JsonObject& json);
-			inline void deserialize(size_t index, const JsonObject& json, auto& data, bool isLeaf = false);
+			inline void deserializeMany(size_t index, const JsonObject& json, const std::vector<std::string>& names, auto& first, auto& ...others);
+			inline void deserializeMany(size_t index, const JsonObject& json, const std::vector<std::string>& names);
+			inline void deserialize(size_t index, const JsonObject& json, const std::vector<std::string>& names, auto& data, bool isLeaf = false);
 
-			inline void deserializeMany(size_t index, const JsonObject& json) {}
+			inline void deserializeMany(size_t index, const JsonObject& json, const std::vector<std::string>& names) {}
 
-			inline void deserializeMany(size_t index, const JsonObject& json, auto& first, auto& ...others)
+			inline void deserializeMany(size_t index, const JsonObject& json, const std::vector<std::string>& names, auto& first, auto& ...others)
 			{
-				deserialize(index, json, first);
-				deserializeMany(index + 1, json, others...);
+				deserialize(index, json, names, first);
+				deserializeMany(index + 1, json, names, others...);
 			}
 			
-			inline void deserialize(size_t index, const JsonObject& json, auto& data, bool isLeaf)
+			inline void deserialize(size_t index, const JsonObject& json, const std::vector<std::string>& names, auto& data, bool isLeaf)
 			{
 				using type = std::remove_cvref_t<decltype(data)>;
 				static_assert(!std::is_pointer_v<type>);
@@ -508,7 +513,12 @@ namespace ManiZ
 				{
 					if constexpr (!ManiZ::is_aggregate_struct<type>)
 					{
-						deserialize(0, json.getAt(index), data, true);
+						constexpr bool IS_LEAF = true;
+						const std::string name = names[index];
+						if (json.has(name))
+						{
+							deserialize(0, json[name], names, data, IS_LEAF);
+						}
 						return;
 					}
 				}
@@ -537,25 +547,34 @@ namespace ManiZ
 					{
 						const JsonObject& jsonObject = jsonArray[index];
 						constexpr bool isLeaf = true;
-						deserialize(0, jsonObject, data[index], isLeaf);
+						deserialize(0, jsonObject, names, data[index], isLeaf);
 					}
 				}
 				else
 				{
-					// we're in an aggregate type
-					RFL::visitMembers(data, [&](auto& ...members)
+					if (isLeaf)
 					{
-						// recursively serialize the members.
-						if (isLeaf)
+						// we're in an aggregate type
+						RFL::visitMembers(data, [&](auto& ...members)
 						{
 							// we're in a nested structure
-							deserializeMany(0, json, members...);
-						}
-						else
+							auto memberNames = RFL::getMemberNames<type>();
+							deserializeMany(0, json, memberNames, members...);
+						});
+					}
+					else
+					{
+
+						const std::string name = names[index];
+						if (json.has(name))
 						{
-							deserializeMany(0, json.getAt(index), members...);
+							RFL::visitMembers(data, [&](auto& ...members)
+							{
+								auto memberNames = RFL::getMemberNames<type>();
+								deserializeMany(0, json[name], memberNames, members...);
+							});
 						}
-					});
+					}
 				}
 			}
 		}
@@ -579,7 +598,7 @@ namespace ManiZ
 			// we wrap the json object to kickstart the deserialization recursion
 			JsonObject wrapper;
 			wrapper["value"] = std::move(json);
-			_impl::deserializeMany(0, wrapper, obj);
+			_impl::deserializeMany(0, wrapper, { "value" }, obj);
 			return obj;
 		}
 	}
