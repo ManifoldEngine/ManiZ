@@ -507,72 +507,77 @@ namespace ManiZ
 			inline void deserialize(size_t index, const JsonObject& json, const std::vector<std::string>& names, auto& data, bool isLeaf)
 			{
 				using type = std::remove_cvref_t<decltype(data)>;
-				static_assert(!std::is_pointer_v<type>);
-
-				if (!isLeaf)
+				if constexpr (std::is_pointer_v<type>)
 				{
-					if constexpr (!ManiZ::is_aggregate_struct<type>)
-					{
-						constexpr bool IS_LEAF = true;
-						const std::string name = names[index];
-						if (json.has(name))
-						{
-							deserialize(0, json[name], names, data, IS_LEAF);
-						}
-						return;
-					}
-				}
-
-				if constexpr (std::is_enum_v<type> || std::is_fundamental_v<type> || ManiZ::is_string<type>::value)
-				{
-					if (isLeaf)
-					{
-						data = json.get<type>();
-					}
-				}
-				else if constexpr (std::ranges::range<type>)
-				{
-					using value_type = typename type::value_type;
-					
-					// hard iterate over the container
-					const std::vector<JsonObject>& jsonArray = json.getArray();
-					const size_t size = jsonArray.size();
-
-					if constexpr (requires { data.resize(size); })
-					{
-						data.resize(size);
-					}
-					
-					for (size_t index = 0; index < size; index++)
-					{
-						const JsonObject& jsonObject = jsonArray[index];
-						constexpr bool isLeaf = true;
-						deserialize(0, jsonObject, names, data[index], isLeaf);
-					}
+					return;
 				}
 				else
 				{
-					if (isLeaf)
+					if (!isLeaf)
 					{
-						// we're in an aggregate type
-						RFL::visitMembers(data, [&](auto& ...members)
+						if constexpr (!ManiZ::is_aggregate_struct<type>)
 						{
-							// we're in a nested structure
-							auto memberNames = RFL::getMemberNames<type>();
-							deserializeMany(0, json, memberNames, members...);
-						});
+							constexpr bool IS_LEAF = true;
+							const std::string name = names[index];
+							if (json.has(name))
+							{
+								deserialize(0, json[name], names, data, IS_LEAF);
+							}
+							return;
+						}
+					}
+
+					if constexpr (std::is_enum_v<type> || std::is_fundamental_v<type> || ManiZ::is_string<type>::value)
+					{
+						if (isLeaf)
+						{
+							data = json.get<type>();
+						}
+					}
+					else if constexpr (std::ranges::range<type>)
+					{
+						using value_type = typename type::value_type;
+
+						// hard iterate over the container
+						const std::vector<JsonObject>& jsonArray = json.getArray();
+						const size_t size = jsonArray.size();
+
+						if constexpr (requires { data.resize(size); })
+						{
+							data.resize(size);
+						}
+
+						for (size_t index = 0; index < size; index++)
+						{
+							const JsonObject& jsonObject = jsonArray[index];
+							constexpr bool isLeaf = true;
+							deserialize(0, jsonObject, names, data[index], isLeaf);
+						}
 					}
 					else
 					{
-
-						const std::string name = names[index];
-						if (json.has(name))
+						if (isLeaf)
 						{
+							// we're in an aggregate type
 							RFL::visitMembers(data, [&](auto& ...members)
 							{
+								// we're in a nested structure
 								auto memberNames = RFL::getMemberNames<type>();
-								deserializeMany(0, json[name], memberNames, members...);
+								deserializeMany(0, json, memberNames, members...);
 							});
+						}
+						else
+						{
+
+							const std::string name = names[index];
+							if (json.has(name))
+							{
+								RFL::visitMembers(data, [&](auto& ...members)
+								{
+									auto memberNames = RFL::getMemberNames<type>();
+									deserializeMany(0, json[name], memberNames, members...);
+								});
+							}
 						}
 					}
 				}
