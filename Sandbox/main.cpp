@@ -2,5 +2,5 @@
 
 int main()
 {
-	return ManiTests::ManiTestsRunner::runTests();
+	return ManiTests::run();
 }
