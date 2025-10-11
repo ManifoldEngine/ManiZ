@@ -1,6 +1,7 @@
 #pragma once
 #include <ManiTests/ManiTests.h>
 #include <ManiZ/ManiZ.h>
+#include <MyTestModule.h>
 
 MANI_SECTION_BEGIN(Reflection, "reflection")
 {
@@ -19,8 +20,8 @@ MANI_SECTION_BEGIN(Reflection, "reflection")
 			Vector scale;
 		};
 
-		const size_t vectorCount = ManiZ::RFL::memberCount<Vector>();
-		const size_t transformCount = ManiZ::RFL::memberCount<Transform>();
+		constexpr size_t vectorCount = ManiZ::RFL::memberCount<Vector>();
+		constexpr size_t transformCount = ManiZ::RFL::memberCount<Transform>();
 		
 		MANI_TEST_ASSERT(vectorCount == 2, "member count should match");
 		MANI_TEST_ASSERT(transformCount == 3, "member count should match");
@@ -97,6 +98,28 @@ MANI_SECTION_BEGIN(Reflection, "reflection")
 		const std::string_view name = ManiZ::RFL::getTypeName<MyTestStruct>();
 
 		MANI_TEST_ASSERT(name == "MyTestStruct", "should be equal to the type's name");
+	}
+
+	MANI_TEST(ShouldGetStrucNameInModule, "Should get struct name in another module")
+	{
+		const std::string_view name = ManiZ::RFL::getTypeName<TestModule::MyTestStruct>();
+
+		MANI_TEST_ASSERT(name == "MyTestStruct", "should be equal to the type's name");
+	}
+
+	MANI_TEST(ShouldGetTemplateStrucNameInModule, "Should get struct name in another module")
+	{
+		const std::string_view name = ManiZ::RFL::getTypeName<TestModule::MyTestTemplate<float>>();
+
+		MANI_TEST_ASSERT(name == "MyTestTemplate<float>", "should be equal to the type's name");
+	}
+
+	MANI_TEST(ShouldGetTemplateStrucNameInModuleWithNamespace, "Should get struct name in another module")
+	{
+		constexpr bool withNamespace = true;
+		const std::string_view name = ManiZ::RFL::getTypeName<TestModule::MyTestTemplate<float>>(withNamespace);
+
+		MANI_TEST_ASSERT(name == "TestModule::MyTestTemplate<float>", "should be equal to the type's name");
 	}
 }
 MANI_SECTION_END(Reflection)

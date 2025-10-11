@@ -5,6 +5,7 @@
 #include <variant>
 #include <source_location>
 #include <iostream>
+#include <algorithm>
 
 namespace ManiZ
 {
@@ -525,13 +526,47 @@ namespace ManiZ
 				return v;
 			}
 
-			template<typename T>
-			inline constexpr std::string_view getTypeName()
+			inline constexpr std::string_view withoutPrefix(const std::string_view& str, const std::string_view& prefix)
 			{
+				if (str.starts_with(prefix))
+				{
+					return str.substr(prefix.size());
+				}
+				else
+				{
+					return str;
+				}
+			}
+
+			template<typename T>
+			inline constexpr std::string_view getTypeName(bool withNamespace)
+			{
+				constexpr std::string_view suffix = ">(bool)";
+				constexpr std::string_view prefix = "getTypeName<";
+
 				constexpr std::string_view raw = std::source_location::current().function_name();
-				constexpr auto end = raw.rfind(std::string_view(">(void)"));
-				constexpr auto begin = raw.rfind(std::string_view("::"), end - 1) + 2; // + 2 to account for the two characters in "::"
-				return raw.substr(begin, end - begin);
+				constexpr auto end = raw.rfind(suffix);
+				constexpr auto begin = raw.rfind(prefix, end - 1) + prefix.size();
+				constexpr std::string_view rawType = raw.substr(begin, end - begin);
+				
+				// clean up struct/class keyword
+				constexpr std::string_view structString = "struct ";
+				constexpr std::string_view classString = "class ";
+				constexpr std::string_view type = withoutPrefix(withoutPrefix(rawType, structString), classString);
+				if (withNamespace)
+				{
+					return type;
+				}
+
+				// clean up namespaces
+				constexpr std::string_view namespaceDivider = "::";
+				constexpr auto pos = type.rfind(namespaceDivider);
+				if (pos == std::string::npos)
+				{
+					return type;
+				}
+
+				return type.substr(pos + namespaceDivider.size());
 			}
 		}
 		
@@ -548,9 +583,9 @@ namespace ManiZ
 		}
 
 		template<typename T>
-		inline constexpr auto getTypeName()
+		inline constexpr auto getTypeName(bool withNamespace = false)
 		{
-			return _impl::getTypeName<T>();
+			return _impl::getTypeName<T>(withNamespace);
 		}
 
 		template<typename T>
