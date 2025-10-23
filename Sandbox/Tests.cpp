@@ -184,9 +184,9 @@ MANI_SECTION_BEGIN(Json, "Json")
 		}
 
 		{
-			ManiZ::JsonObject obj(std::numeric_limits<unsigned long>::max());			
-			MANI_TEST_ASSERT(obj.get<unsigned long>() == std::numeric_limits<unsigned long>::max(), "should match value");
-			MANI_TEST_ASSERT(obj.get<uint64_t>() == std::numeric_limits<unsigned long>::max(), "should match value");
+			ManiZ::JsonObject obj(std::numeric_limits<unsigned long long>::max());			
+			MANI_TEST_ASSERT(obj.get<unsigned long long>() == std::numeric_limits<unsigned long long>::max(), "should match value");
+			MANI_TEST_ASSERT(obj.get<uint64_t>() == std::numeric_limits<unsigned long long>::max(), "should match value");
 		}
 
 		{
@@ -452,6 +452,19 @@ MANI_SECTION_BEGIN(Json, "Json")
 									"}";
 		Test t = ManiZ::from::json<Test>(jsonString);
 		MANI_TEST_ASSERT(t.a == 4 && t.b == 0 && t.c == 2, "t should be equal to the json values");
+	}
+
+	MANI_TEST(ShoulBeAbleToDeserialize64BitsMaxValue, "should be able to deserialize 64bits max value")
+	{
+		struct Test
+		{
+			unsigned long long value = UINT64_MAX;
+		};
+
+		Test expected;
+		std::string s = ManiZ::to::json(expected);
+		Test result = ManiZ::from::json<Test>(s);
+		MANI_TEST_ASSERT(expected.value == result.value, "should be able to deserialize 64bits max value");
 	}
 }
 MANI_SECTION_END(Json)
