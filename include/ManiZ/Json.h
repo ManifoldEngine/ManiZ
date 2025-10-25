@@ -507,7 +507,7 @@ namespace ManiZ
 			inline void deserialize(size_t index, const JsonObject& json, const std::vector<std::string>& names, auto& data, bool isLeaf)
 			{
 				using type = std::remove_cvref_t<decltype(data)>;
-				if constexpr (std::is_pointer_v<type>)
+				if constexpr (std::is_pointer_v<type> || RFL::memberCount<type>() == 0)
 				{
 					return;
 				}

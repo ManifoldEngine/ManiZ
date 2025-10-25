@@ -466,5 +466,13 @@ MANI_SECTION_BEGIN(Json, "Json")
 		Test result = ManiZ::from::json<Test>(s);
 		MANI_TEST_ASSERT(expected.value == result.value, "should be able to deserialize 64bits max value");
 	}
+
+	MANI_TEST(ShouldBeAbleToDeserializeAnEmptyStruct, "Should Be Able To Deserialize An Empty Struct")
+	{
+		struct Test {};
+		constexpr size_t count = ManiZ::RFL::memberCount<Test>();
+		static_assert(count == 0);
+		const Test result = ManiZ::from::json<Test>("");
+	}
 }
 MANI_SECTION_END(Json)
