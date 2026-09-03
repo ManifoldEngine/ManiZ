@@ -264,7 +264,7 @@ namespace ManiZ
 			inline constexpr auto visitMembers(const T& object, auto&& f)
 			{
 				constexpr size_t count = memberCount<T>();
-				if		constexpr (count == 0) { return f(); }
+				if		constexpr (count == 0 || std::is_fundamental_v<T>) { return f(); }
 				else if constexpr (count == 1) { const auto& [a0] = object; return f(a0); }
 				else if constexpr (count == 2) { const auto& [a0, a1] = object; return f(a0, a1); }
 				else if constexpr (count == 3) { const auto& [a0, a1, a2] = object; return f(a0, a1, a2); }
@@ -371,7 +371,7 @@ namespace ManiZ
 			inline constexpr auto visitMembers(T& object, auto&& f)
 			{
 				constexpr size_t count = memberCount<T>();
-				if		constexpr (count == 0) { return f(); }
+				if		constexpr (count == 0 || std::is_fundamental_v<T>) { return f(); }
 				else if constexpr (count == 1) { auto& [a0] = object; return f(a0); }
 				else if constexpr (count == 2) { auto& [a0, a1] = object; return f(a0, a1); }
 				else if constexpr (count == 3) { auto& [a0, a1, a2] = object; return f(a0, a1, a2); }

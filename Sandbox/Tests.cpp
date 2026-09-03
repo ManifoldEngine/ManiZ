@@ -474,5 +474,30 @@ MANI_SECTION_BEGIN(Json, "Json")
 		static_assert(count == 0);
 		const Test result = ManiZ::from::json<Test>("");
 	}
+
+	MANI_TEST(PartialDeserialization, "Should Be Able To partially deserialize a json file")
+	{
+		struct Test1 
+		{
+			long a = 0;
+			int b = 0;
+		};
+
+		struct Test2
+		{
+			std::string c = "coucou";
+			bool d = false;
+		};
+
+		const std::string json = "{\"a\":69,\"b\":420,\"c\":\"hello\",\"d\":true}";
+		const Test1 t1 = ManiZ::from::json<Test1>(json);
+		const Test2 t2 = ManiZ::from::json<Test2>(json);
+
+		const Test1 e1{ .a = 69, .b = 420 };
+		const Test2 e2{ .c = "hello", .d = true };
+		
+		MANI_TEST_ASSERT(t1.a == e1.a && t1.b == e1.b, "Should be equal");
+		MANI_TEST_ASSERT(t2.c == e2.c && t2.d == e2.d, "Should be equal");
+	}
 }
 MANI_SECTION_END(Json)
